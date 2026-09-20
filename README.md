@@ -17,7 +17,7 @@ Projekto tikslas – palengvinti krepšinio žaidėjų ir komandų skautavimą b
 
 Kuriama platforma bus skirta krepšinio klubų darbuotojams, treneriams, skautams, žaidėjams bei jų atstovams. Naudotojai galės peržiūrėti žaidėjų ir komandų profilius, jų statistiką, kurti stebėjimo sąrašus bei rengti skautavimo ataskaitas. Klubai galės stebėti potencialius komandos papildymus ir analizuoti varžovų sudėtis bei statistinius rodiklius, o žaidėjai ir jų atstovai – vertinti skirtingas komandas, jų sudėtis bei žaidimo stilių.
 
-Pagrindiniai sistemos objektai bus stebėjimo sąrašas, stebimas objektas ir skautavimo ataskaita. Stebimas objektas – tai konkretaus žaidėjo arba komandos įtraukimas į stebėjimo sąrašą. Tas pats žaidėjas ar komanda galės būti įtraukti į kelis skirtingus sąrašus. Stebėjimo sąrašuose bus kaupiami dominantys žaidėjai arba komandos. Kiekvienas į sąrašą įtrauktas objektas turės savo stebėjimo būseną ir prioritetą, kuriuos galės nustatyti sąrašo autorius, o prie jo bus galima pridėti ir peržiūrėti skirtingų naudotojų ataskaitas su pastebėjimais, vertinimais ir išvadomis. Naudotojai galės suteikti kitiems prieigą prie savo sąrašų ir juose esančių ataskaitų bei kartu stebėti žaidėjus ar komandas. Kiekvienam stebėjimo sąrašui bus galima nurodyti jo tikslą ar poreikį (pvz. konkrečią poziciją, kurią norima papildyti, ar sezoną, kuriam ieškoma sprendimo), o tai leis analitikui palyginti sąraše esančius stebimus objektus tarpusavyje pagal jiems skirtus skautų vertinimus ir priimti tinkamą sprendimą.
+Pagrindiniai sistemos objektai bus stebėjimo sąrašas, stebimas objektas ir skautavimo ataskaita. Stebimas objektas – tai konkretaus žaidėjo arba komandos įtraukimas į stebėjimo sąrašą. Tas pats žaidėjas ar komanda galės būti įtraukti į kelis skirtingus sąrašus. Stebėjimo sąrašuose bus kaupiami dominantys žaidėjai arba komandos. Kiekvienas į sąrašą įtrauktas objektas turės savo stebėjimo būseną ir prioritetą, kuriuos galės nustatyti sąrašo autorius, o prie jo bus galima pridėti ir peržiūrėti skirtingų naudotojų ataskaitas su pastebėjimais, vertinimais ir išvadomis. Naudotojai galės suteikti kitiems prieigą prie savo sąrašų ir juose esančių ataskaitų bei kartu stebėti žaidėjus ar komandas. Kiekvienam stebėjimo sąrašui bus galima nurodyti jo tikslą ar poreikį (pvz. konkrečią poziciją, kurią norima papildyti, ar sezoną, kuriam ieškoma sprendimo), o tai leis analitikui palyginti sąraše esančius stebimus objektus pagal skautų vertinimus bei kitus rodiklius ir priimti tinkamą sprendimą.
 
 ### 1.2. Funkciniai reikalavimai
 
@@ -47,8 +47,6 @@ Sistemoje numatytos trys registruotų naudotojų rolės: skaitytojas, analitikas
 5. Ataskaitose skirti balus pagal nustatytus žaidėjų arba komandų vertinimo kriterijus.
 6. Filtruoti stebėjimo sąrašus, stebimus objektus ir ataskaitas.
 
-Skaitytojui bus suteikiama tik peržiūros teisė. Analitikas arba administratorius galės redaguoti bendrinamo sąrašo turinį tik gavęs atitinkamą prieigą.
-
 **Administratorius galės naudotis analitiko funkcijomis ir papildomai:**
 
 1. Pridėti ir taisyti žaidėjų bei komandų profilius ir komandų sudėtis.
@@ -59,13 +57,13 @@ Skaitytojui bus suteikiama tik peržiūros teisė. Analitikas arba administrator
 
 Sistemos sudedamosios dalys:
 
-- Kliento pusė (angl. Front-End) – React ir TypeScript; kūrimui ir programos surinkimui bus naudojamas Vite;
+- Kliento pusė (angl. Front-End) – React ir TypeScript, o kūrimui ir programos surinkimui bus naudojamas Vite;
 - Serverio pusė (angl. Back-End) – Python ir FastAPI;
 - Duomenų bazė – PostgreSQL.
 
-Kliento pusė bus skirta naudotojo sąsajai, o serverio pusė – sistemos veikimo logikai, duomenų tvarkymui, autentifikacijai ir prieigos teisių tikrinimui. Duomenų bazei pasiekti bus naudojama SQLAlchemy ORM biblioteka.
+Kliento pusė bus skirta naudotojo sąsajai, o serverio pusė – sistemos veikimo logikai, duomenų tvarkymui, autentifikacijai ir prieigos teisių tikrinimui. Duomenų bazės užklausoms bus naudojama SQLAlchemy ORM biblioteka.
 
-Sistemos talpinimui bus naudojamos debesų paslaugos. Naudotojai aplikaciją pasieks per interneto naršyklę, o kliento pusė per HTTPS protokolą bendraus su serverio API. Serveris vykdys duomenų mainus su PostgreSQL duomenų baze.
+Sistemos kliento ir serverio dalys bus talpinamos Vercel platformoje. Kliento dalies statiniai failai bus pateikiami naudojant Vercel infrastruktūrą, o FastAPI serverio dalis bus vykdoma naudojant Vercel Functions. PostgreSQL duomenų bazė bus talpinama Neon platformoje. Naudotojai aplikaciją pasieks per savo pasirinktą interneto naršyklę, o kliento dalis per HTTPS protokolą kreipsis į REST API. Serverio dalis su PostgreSQL duomenų baze bendraus PostgreSQL protokolu per TCP/IP ryšį.
 
 ![Numatoma sistemos diegimo diagrama](docs/diegimo-diagrama.png)
 
