@@ -65,6 +65,6 @@ Kliento pusė bus skirta naudotojo sąsajai, o serverio pusė – sistemos veiki
 
 Sistemos kliento ir serverio dalys bus talpinamos Vercel platformoje. Kliento dalies statiniai failai bus pateikiami naudojant Vercel infrastruktūrą, o FastAPI serverio dalis bus vykdoma naudojant Vercel Functions. PostgreSQL duomenų bazė bus talpinama Neon platformoje. Naudotojai aplikaciją pasieks per savo pasirinktą interneto naršyklę, o kliento dalis per HTTPS protokolą kreipsis į REST API. Serverio dalis su PostgreSQL duomenų baze bendraus PostgreSQL protokolu per TCP/IP ryšį.
 
-![Numatoma sistemos diegimo diagrama](docs/diegimo-diagrama.png)
+![Numatoma sistemos diegimo diagrama](docs/diegimo_diagrama.png)
 
 *1 pav. Numatoma sistemos diegimo diagrama.*
