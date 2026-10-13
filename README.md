@@ -68,3 +68,58 @@ Sistemos kliento ir serverio dalys bus talpinamos Vercel platformoje. Kliento da
 ![Numatoma sistemos diegimo diagrama](docs/diegimo_diagrama.png)
 
 *1 pav. Numatoma sistemos diegimo diagrama.*
+## 3. Pirmasis laboratorinis darbas – REST API
+
+### 3.1. Realizacija
+
+Įgyvendintas REST API su trimis esybėmis, susietomis dviem 1:N ryšiais:
+
+- `Watchlist` – stebėjimo sąrašas;
+- `WatchlistEntry` – stebimas žaidėjas arba komanda;
+- `ScoutingReport` – skautavimo ataskaita.
+
+Kiekvienai esybei realizuotos LIST, GET, POST, PUT ir DELETE operacijos. Sąrašų gavimas palaiko puslapiavimą ir filtravimą, atsakymuose pateikiamos HATEOAS (`_links`) nuorodos. `GET /dashboard` grąžina bendrą skautavimo duomenų suvestinę.
+
+### 3.2. Pradinis paruošimas
+
+Reikia Python ir PostgreSQL. Komandos skirtos **Windows PowerShell** terminalui projekto aplanke.
+
+Sukurti virtualiąją aplinką ir įdiegti priklausomybes:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+```
+
+PostgreSQL serveryje sukurti duomenų bazę `hoopfolio`. Projekto aplanke sukurti `.env` failą:
+
+```dotenv
+DB_USER=postgres
+DB_PASSWORD="JUSU_SLAPTAZODIS"
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=hoopfolio
+```
+
+Sukurti lenteles ir įkelti demonstracinius duomenis:
+
+```powershell
+python -c "from database import engine; from models import Base; Base.metadata.create_all(bind=engine)"
+python seed.py
+```
+
+### 3.3. Pakartotinis paleidimas
+
+Kai aplinka jau paruošta ir PostgreSQL serveris veikia:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m uvicorn main:app --reload
+```
+
+### 3.4. Dokumentacija ir testavimas
+
+- Swagger UI: http://127.0.0.1:8000/docs
+- OpenAPI: http://127.0.0.1:8000/openapi.json
+- Postman testų kolekcija: `postman/` kataloge. Paleisti veikiančiam API serveriui naudojant **Collection Runner** (1 iteracija).
