@@ -1,10 +1,17 @@
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from database import engine
-from models import Watchlist, WatchlistEntry, ScoutingReport
+from models import (
+    Watchlist,
+    WatchlistEntry,
+    ScoutingReport,
+    TargetType,
+    EntryStatus,
+    Priority
+)
 from schemas import (
     WatchlistCreate,
     WatchlistResponse,
@@ -33,14 +40,31 @@ def home():
 # --------------------------------------------------
 
 
-# 1. Gauti visus stebėjimo sąrašus
+# 1. Gauti stebėjimo sąrašus su puslapiavimu ir filtravimu
 @app.get("/watchlists", response_model=list[WatchlistResponse])
-def get_watchlists():
+def get_watchlists(
+    page: int = Query(default=1, ge=1),
+    per_page: int = Query(default=10, ge=1, le=100),
+    name: str | None = None
+):
     with Session(engine) as session:
-        statement = select(Watchlist).order_by(Watchlist.id)
-        watchlists = session.scalars(statement).all()
+        statement = select(Watchlist)
 
-        return watchlists
+        # Jei pateiktas pavadinimas, ieškome jį turinčių sąrašų
+        if name is not None:
+            statement = statement.where(
+                Watchlist.name.ilike(f"%{name}%")
+            )
+
+        # Surikiuojame ir paimame tik prašomo puslapio įrašus
+        statement = (
+            statement
+            .order_by(Watchlist.id)
+            .offset((page - 1) * per_page)
+            .limit(per_page)
+        )
+
+        return session.scalars(statement).all()
 
 
 # 2. Sukurti naują stebėjimo sąrašą
@@ -131,14 +155,20 @@ def delete_watchlist(watchlist_id: int):
 # --------------------------------------------------
 
 
-# 1. Gauti visus konkretaus sąrašo stebimus objektus
+# 1. Gauti sąrašo stebimus objektus su puslapiavimu ir filtravimu
 @app.get(
     "/watchlists/{watchlist_id}/entries",
     response_model=list[WatchlistEntryResponse]
 )
-def get_watchlist_entries(watchlist_id: int):
+def get_watchlist_entries(
+    watchlist_id: int,
+    page: int = Query(default=1, ge=1),
+    per_page: int = Query(default=10, ge=1, le=100),
+    target_type: TargetType | None = None,
+    status: EntryStatus | None = None,
+    priority: Priority | None = None
+):
     with Session(engine) as session:
-        # Patikriname, ar stebėjimo sąrašas egzistuoja
         watchlist = session.get(Watchlist, watchlist_id)
 
         if watchlist is None:
@@ -147,11 +177,31 @@ def get_watchlist_entries(watchlist_id: int):
                 detail="Stebėjimo sąrašas nerastas"
             )
 
-        # Atrenkame tik šiam sąrašui priklausančius objektus
+        statement = select(WatchlistEntry).where(
+            WatchlistEntry.watchlist_id == watchlist_id
+        )
+
+        # Filtruojame pagal objekto tipą, būseną ir prioritetą
+        if target_type is not None:
+            statement = statement.where(
+                WatchlistEntry.target_type == target_type
+            )
+
+        if status is not None:
+            statement = statement.where(
+                WatchlistEntry.status == status
+            )
+
+        if priority is not None:
+            statement = statement.where(
+                WatchlistEntry.priority == priority
+            )
+
         statement = (
-            select(WatchlistEntry)
-            .where(WatchlistEntry.watchlist_id == watchlist_id)
+            statement
             .order_by(WatchlistEntry.id)
+            .offset((page - 1) * per_page)
+            .limit(per_page)
         )
 
         return session.scalars(statement).all()
@@ -281,14 +331,19 @@ def delete_watchlist_entry(watchlist_id: int, entry_id: int):
 # --------------------------------------------------
 
 
-# 1. Gauti visas konkretaus stebimo objekto ataskaitas
+# 1. Gauti objekto ataskaitas su puslapiavimu ir filtravimu
 @app.get(
     "/watchlists/{watchlist_id}/entries/{entry_id}/reports",
     response_model=list[ScoutingReportResponse]
 )
-def get_scouting_reports(watchlist_id: int, entry_id: int):
+def get_scouting_reports(
+    watchlist_id: int,
+    entry_id: int,
+    page: int = Query(default=1, ge=1),
+    per_page: int = Query(default=10, ge=1, le=100),
+    scout_name: str | None = None
+):
     with Session(engine) as session:
-        # Patikriname, ar objektas priklauso nurodytam sąrašui
         entry = session.get(WatchlistEntry, entry_id)
 
         if entry is None or entry.watchlist_id != watchlist_id:
@@ -297,11 +352,21 @@ def get_scouting_reports(watchlist_id: int, entry_id: int):
                 detail="Stebimas objektas šiame sąraše nerastas"
             )
 
-        # Atrenkame tik šiam objektui priklausančias ataskaitas
+        statement = select(ScoutingReport).where(
+            ScoutingReport.entry_id == entry_id
+        )
+
+        # Jei nurodytas skautas, atrenkame jo ataskaitas
+        if scout_name is not None:
+            statement = statement.where(
+                ScoutingReport.scout_name.ilike(f"%{scout_name}%")
+            )
+
         statement = (
-            select(ScoutingReport)
-            .where(ScoutingReport.entry_id == entry_id)
+            statement
             .order_by(ScoutingReport.id)
+            .offset((page - 1) * per_page)
+            .limit(per_page)
         )
 
         return session.scalars(statement).all()
