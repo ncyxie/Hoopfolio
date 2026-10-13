@@ -1,6 +1,6 @@
 
 from fastapi import FastAPI, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 from database import engine
@@ -23,6 +23,18 @@ from schemas import (
 
 
 app = FastAPI(title="Hoopfolio API")
+
+
+# Paruošti ataskaitos atsakymą su sąrašo ID HATEOAS nuorodoms
+def prepare_report_response(report: ScoutingReport, watchlist_id: int):
+    data = ScoutingReportCreate.model_validate(report, from_attributes=True)
+
+    return ScoutingReportResponse(
+        **data.model_dump(),
+        id=report.id,
+        entry_id=report.entry_id,
+        watchlist_id=watchlist_id
+    )
 
 
 # --------------------------------------------------
@@ -369,7 +381,12 @@ def get_scouting_reports(
             .limit(per_page)
         )
 
-        return session.scalars(statement).all()
+        reports = session.scalars(statement).all()
+
+        return [
+            prepare_report_response(report, watchlist_id)
+            for report in reports
+        ]
 
 
 # 2. Sukurti naują skautavimo ataskaitą
@@ -410,7 +427,7 @@ def create_scouting_report(
         session.commit()
         session.refresh(new_report)
 
-        return new_report
+        return prepare_report_response(new_report, watchlist_id)
 
 
 # 3. Gauti vieną konkrečią skautavimo ataskaitą
@@ -442,7 +459,7 @@ def get_scouting_report(
                 detail="Skautavimo ataskaita nerasta"
             )
 
-        return report
+        return prepare_report_response(report, watchlist_id)
 
 
 # 4. Atnaujinti esamą skautavimo ataskaitą
@@ -487,7 +504,7 @@ def update_scouting_report(
         session.commit()
         session.refresh(report)
 
-        return report
+        return prepare_report_response(report, watchlist_id)
 
 
 # 5. Ištrinti skautavimo ataskaitą
@@ -519,3 +536,49 @@ def delete_scouting_report(
 
         session.delete(report)
         session.commit()
+
+
+# --------------------------------------------------
+# DASHBOARD - SKAUTAVIMO SUVESTINĖ
+# --------------------------------------------------
+
+
+# Gauti bendrą stebėjimo sąrašų, objektų ir ataskaitų suvestinę
+@app.get("/dashboard")
+def get_dashboard():
+    with Session(engine) as session:
+        statement = (
+            select(
+                Watchlist.id,
+                Watchlist.name,
+                func.count(func.distinct(WatchlistEntry.id)).label("entries_count"),
+                func.count(ScoutingReport.id).label("reports_count")
+            )
+            .outerjoin(
+                WatchlistEntry,
+                WatchlistEntry.watchlist_id == Watchlist.id
+            )
+            .outerjoin(
+                ScoutingReport,
+                ScoutingReport.entry_id == WatchlistEntry.id
+            )
+            .group_by(Watchlist.id, Watchlist.name)
+            .order_by(Watchlist.id)
+        )
+
+        results = session.execute(statement).all()
+
+        return {
+            "total_watchlists": len(results),
+            "total_entries": sum(row.entries_count for row in results),
+            "total_reports": sum(row.reports_count for row in results),
+            "watchlists": [
+                {
+                    "id": row.id,
+                    "name": row.name,
+                    "entries_count": row.entries_count,
+                    "reports_count": row.reports_count
+                }
+                for row in results
+            ]
+        }
