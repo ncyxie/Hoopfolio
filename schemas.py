@@ -28,7 +28,6 @@ class WatchlistResponse(BaseModel):
 
     # HATEOAS - nuorodos į sąrašą ir jo stebimus objektus
     @computed_field(alias="_links")
-    @property
     def links(self) -> dict[str, str]:
         return {
             "self": f"/watchlists/{self.id}",
@@ -62,7 +61,6 @@ class WatchlistEntryResponse(BaseModel):
 
     # HATEOAS - nuorodos į objektą, jo sąrašą ir ataskaitas
     @computed_field(alias="_links")
-    @property
     def links(self) -> dict[str, str]:
         entry_url = f"/watchlists/{self.watchlist_id}/entries/{self.id}"
 
@@ -103,13 +101,11 @@ class ScoutingReportResponse(ScoutingReportCreate):
 
     # Bendras įvertinimas apskaičiuojamas, DB jo nesaugome
     @computed_field
-    @property
     def overall_rating(self) -> float:
         return (self.offense_rating + self.defense_rating) / 2
 
     # HATEOAS - nuorodos į ataskaitą, objektą ir sąrašą
     @computed_field(alias="_links")
-    @property
     def links(self) -> dict[str, str]:
         entry_url = f"/watchlists/{self.watchlist_id}/entries/{self.entry_id}"
 
