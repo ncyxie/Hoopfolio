@@ -1,4 +1,3 @@
-
 from datetime import date
 
 from sqlalchemy import select
@@ -11,17 +10,15 @@ from models import (
     ScoutingReport,
     TargetType,
     EntryStatus,
-    Priority
+    Priority,
 )
 
 
 with Session(engine) as session:
-
-    # Patikriname, ar demonstraciniai duomenys jau buvo įkelti
-    existing = session.scalar(
-        select(Watchlist.id)
-        .where(Watchlist.name == "Demo - Bendras stebėjimas")
-    )
+    # Patikrinama, ar demonstraciniai duomenys jau egzistuoja.
+    statement = select(Watchlist.id)
+    statement = statement.where(Watchlist.name == "Demo - Bendras stebėjimas")
+    existing = session.scalar(statement)
 
     if existing is not None:
         print("Demonstraciniai duomenys jau įkelti.")
@@ -35,228 +32,257 @@ with Session(engine) as session:
             Watchlist(
                 name="Demo - Bendras stebėjimas",
                 purpose="Stebėti skirtingus žaidėjus ir komandas",
-                owner_name="Skautas A"
+                owner_name="Skautas A",
             ),
             Watchlist(
                 name="Demo - Eurolygos komandos",
                 purpose="Analizuoti Eurolygos komandų žaidimą",
-                owner_name="Skautas B"
+                owner_name="Skautas B",
             ),
             Watchlist(
                 name="Demo - Perspektyvūs aukštaūgiai",
                 purpose="Ieškoti jaunų vidurio puolėjų",
-                owner_name="Skautas A"
+                owner_name="Skautas A",
             ),
             Watchlist(
                 name="Demo - Komandinė gynyba",
                 purpose="Vertinti komandų gynybines sistemas",
-                owner_name="Skautas C"
+                owner_name="Skautas C",
             ),
             Watchlist(
                 name="Demo - Atakuojantys gynėjai",
                 purpose="Stebėti rezultatyvius gynėjus",
-                owner_name="Skautas B"
-            )
+                owner_name="Skautas B",
+            ),
         ]
 
         session.add_all(watchlists)
-        session.flush()
+        session.flush()  # Sąrašų ID reikalingi stebimiems objektams susieti.
 
         # --------------------------------------------------
         # 2. STEBIMI ŽAIDĖJAI IR KOMANDOS
         # --------------------------------------------------
 
-        # Pirmas skaičius nurodo sąrašą iš watchlists
-        entries_data = [
-            (0, TargetType.player, "Lukas Valaitis",
-             EntryStatus.watching, Priority.high,
-             "Vertinti perdavimus ir aikštės matymą"),
-
-            (0, TargetType.team, "Vilniaus Sakalai",
-             EntryStatus.new, Priority.medium,
-             "Analizuoti komandinį puolimą"),
-
-            (0, TargetType.player, "Dominykas Petrauskas",
-             EntryStatus.watching, Priority.low,
-             "Stebėti individualią gynybą"),
-
-            (0, TargetType.team, "Kauno Perkūnas",
-             EntryStatus.closed, Priority.low,
-             "Pirminė komandos analizė baigta"),
-
-            (1, TargetType.team, "Kauno Žalgiris",
-             EntryStatus.watching, Priority.high,
-             "Stebėti puolimo derinius"),
-
-            (1, TargetType.team, "FC Barcelona",
-             EntryStatus.new, Priority.medium,
-             "Analizuoti žaidimą prieš zoninę gynybą"),
-
-            (2, TargetType.player, "Nojus Rimkus",
-             EntryStatus.watching, Priority.high,
-             "Vertinti kovą dėl atšokusių kamuolių"),
-
-            (3, TargetType.team, "Vilniaus Rytas",
-             EntryStatus.watching, Priority.high,
-             "Analizuoti perimetro gynybą"),
-
-            (3, TargetType.team, "Kauno Žalgiris",
-             EntryStatus.new, Priority.medium,
-             "Stebėti gynybinius keitimus"),
-
-            (4, TargetType.player, "Matas Jankauskas",
-             EntryStatus.watching, Priority.medium,
-             "Vertinti metimą ir prasiveržimus")
+        # Kiekvienas stebimas objektas susiejamas su sąrašu per watchlist_id.
+        # watchlists[0].id – pirmojo sąrašo ID duomenų bazėje.
+        entries = [
+            WatchlistEntry(
+                watchlist_id=watchlists[0].id,
+                target_type=TargetType.player,
+                target_name="Lukas Valaitis",
+                status=EntryStatus.watching,
+                priority=Priority.high,
+                context="Vertinti perdavimus ir aikštės matymą",
+            ),
+            WatchlistEntry(
+                watchlist_id=watchlists[0].id,
+                target_type=TargetType.team,
+                target_name="Vilniaus Sakalai",
+                status=EntryStatus.new,
+                priority=Priority.medium,
+                context="Analizuoti komandinį puolimą",
+            ),
+            WatchlistEntry(
+                watchlist_id=watchlists[0].id,
+                target_type=TargetType.player,
+                target_name="Dominykas Petrauskas",
+                status=EntryStatus.watching,
+                priority=Priority.low,
+                context="Stebėti individualią gynybą",
+            ),
+            WatchlistEntry(
+                watchlist_id=watchlists[0].id,
+                target_type=TargetType.team,
+                target_name="Kauno Perkūnas",
+                status=EntryStatus.closed,
+                priority=Priority.low,
+                context="Pirminė komandos analizė baigta",
+            ),
+            WatchlistEntry(
+                watchlist_id=watchlists[1].id,
+                target_type=TargetType.team,
+                target_name="Kauno Žalgiris",
+                status=EntryStatus.watching,
+                priority=Priority.high,
+                context="Stebėti puolimo derinius",
+            ),
+            WatchlistEntry(
+                watchlist_id=watchlists[1].id,
+                target_type=TargetType.team,
+                target_name="FC Barcelona",
+                status=EntryStatus.new,
+                priority=Priority.medium,
+                context="Analizuoti žaidimą prieš zoninę gynybą",
+            ),
+            WatchlistEntry(
+                watchlist_id=watchlists[2].id,
+                target_type=TargetType.player,
+                target_name="Nojus Rimkus",
+                status=EntryStatus.watching,
+                priority=Priority.high,
+                context="Vertinti kovą dėl atšokusių kamuolių",
+            ),
+            WatchlistEntry(
+                watchlist_id=watchlists[3].id,
+                target_type=TargetType.team,
+                target_name="Vilniaus Rytas",
+                status=EntryStatus.watching,
+                priority=Priority.high,
+                context="Analizuoti perimetro gynybą",
+            ),
+            WatchlistEntry(
+                watchlist_id=watchlists[3].id,
+                target_type=TargetType.team,
+                target_name="Kauno Žalgiris",
+                status=EntryStatus.new,
+                priority=Priority.medium,
+                context="Stebėti gynybinius keitimus",
+            ),
+            WatchlistEntry(
+                watchlist_id=watchlists[4].id,
+                target_type=TargetType.player,
+                target_name="Matas Jankauskas",
+                status=EntryStatus.watching,
+                priority=Priority.medium,
+                context="Vertinti metimą ir prasiveržimus",
+            ),
         ]
 
-        entries = []
-
-        for list_index, target_type, target_name, status, priority, context in entries_data:
-            entry = WatchlistEntry(
-                watchlist_id=watchlists[list_index].id,
-                target_type=target_type,
-                target_name=target_name,
-                status=status,
-                priority=priority,
-                context=context
-            )
-
-            entries.append(entry)
-
         session.add_all(entries)
-        session.flush()
+        session.flush()  # Stebimų objektų ID reikalingi ataskaitoms susieti.
 
         # --------------------------------------------------
         # 3. SKAUTAVIMO ATASKAITOS
         # --------------------------------------------------
 
-        # Pirmas skaičius nurodo objektą iš entries
-        reports_data = [
-            (
-                0, "Skautas A", date(2026, 9, 10),
-                "Tikslūs perdavimai ir geras aikštės matymas",
-                "Nestabili individuali gynyba",
-                "Gerai valdo rungtynių tempą",
-                "Verta tęsti stebėjimą",
-                "Demonstracinė perdavimų analizė",
-                8, 6
+        # Kiekviena ataskaita susiejama su stebimu objektu per entry_id.
+        # entries[0].id – pirmojo stebimo objekto ID duomenų bazėje.
+        reports = [
+            ScoutingReport(
+                entry_id=entries[0].id,
+                scout_name="Skautas A",
+                observation_date=date(2026, 9, 10),
+                strengths="Tikslūs perdavimai ir geras aikštės matymas",
+                weaknesses="Nestabili individuali gynyba",
+                insights="Gerai valdo rungtynių tempą",
+                conclusion="Verta tęsti stebėjimą",
+                statistics_note="Demonstracinė perdavimų analizė",
+                offense_rating=8,
+                defense_rating=6,
             ),
-            (
-                0, "Skautas B", date(2026, 9, 18),
-                "Greiti sprendimai puolime",
-                "Kartais skuba atakuodamas",
-                "Gerai žaidžia du prieš du",
-                "Perspektyvus įžaidėjas",
-                "Demonstracinė puolimo situacijų analizė",
-                9, 6
+            ScoutingReport(
+                entry_id=entries[0].id,
+                scout_name="Skautas B",
+                observation_date=date(2026, 9, 18),
+                strengths="Greiti sprendimai puolime",
+                weaknesses="Kartais skuba atakuodamas",
+                insights="Gerai žaidžia du prieš du",
+                conclusion="Perspektyvus įžaidėjas",
+                statistics_note="Demonstracinė puolimo situacijų analizė",
+                offense_rating=9,
+                defense_rating=6,
             ),
-            (
-                0, "Skautas A", date(2026, 10, 2),
-                "Geras kamuolio valdymas",
-                "Trūksta fizinės jėgos gynyboje",
-                "Pastebimas sprendimų priėmimo progresas",
-                "Rekomenduojama stebėti toliau",
-                "Demonstracinė žaidimo tempo analizė",
-                8, 7
+            ScoutingReport(
+                entry_id=entries[0].id,
+                scout_name="Skautas A",
+                observation_date=date(2026, 10, 2),
+                strengths="Geras kamuolio valdymas",
+                weaknesses="Trūksta fizinės jėgos gynyboje",
+                insights="Pastebimas sprendimų priėmimo progresas",
+                conclusion="Rekomenduojama stebėti toliau",
+                statistics_note="Demonstracinė žaidimo tempo analizė",
+                offense_rating=8,
+                defense_rating=7,
             ),
-            (
-                1, "Skautas C", date(2026, 9, 12),
-                "Geras komandinis puolimas",
-                "Silpna greitų atakų gynyba",
-                "Komanda dažnai išnaudoja kraštus",
-                "Reikia gerinti gynybinį balansą",
-                "Demonstracinis komandinių veiksmų vertinimas",
-                8, 5
+            ScoutingReport(
+                entry_id=entries[1].id,
+                scout_name="Skautas C",
+                observation_date=date(2026, 9, 12),
+                strengths="Geras komandinis puolimas",
+                weaknesses="Silpna greitų atakų gynyba",
+                insights="Komanda dažnai išnaudoja kraštus",
+                conclusion="Reikia gerinti gynybinį balansą",
+                statistics_note="Demonstracinis komandinių veiksmų vertinimas",
+                offense_rating=8,
+                defense_rating=5,
             ),
-            (
-                2, "Skautas B", date(2026, 9, 15),
-                "Aktyvi gynyba ir greitos rankos",
-                "Nestabilus metimas iš toli",
-                "Naudingas spaudžiant varžovus",
-                "Tinka gynybinio gynėjo vaidmeniui",
-                "Demonstracinė gynybos analizė",
-                6, 8
+            ScoutingReport(
+                entry_id=entries[2].id,
+                scout_name="Skautas B",
+                observation_date=date(2026, 9, 15),
+                strengths="Aktyvi gynyba ir greitos rankos",
+                weaknesses="Nestabilus metimas iš toli",
+                insights="Naudingas spaudžiant varžovus",
+                conclusion="Tinka gynybinio gynėjo vaidmeniui",
+                statistics_note="Demonstracinė gynybos analizė",
+                offense_rating=6,
+                defense_rating=8,
             ),
-            (
-                3, "Skautas A", date(2026, 9, 20),
-                "Geras kamuolio judėjimas",
-                "Sunkumai ginantis baudos aikštelėje",
-                "Komanda dažnai kuria laisvus metimus",
-                "Puolimas stipresnis už gynybą",
-                "Demonstracinė komandos analizė",
-                7, 5
+            ScoutingReport(
+                entry_id=entries[3].id,
+                scout_name="Skautas A",
+                observation_date=date(2026, 9, 20),
+                strengths="Geras kamuolio judėjimas",
+                weaknesses="Sunkumai ginantis baudos aikštelėje",
+                insights="Komanda dažnai kuria laisvus metimus",
+                conclusion="Puolimas stipresnis už gynybą",
+                statistics_note="Demonstracinė komandos analizė",
+                offense_rating=7,
+                defense_rating=5,
             ),
-            (
-                4, "Skautas B", date(2026, 9, 24),
-                "Geras puolimo organizavimas",
-                "Pasitaiko klaidų ginantis perimetre",
-                "Efektyviai naudojami užtvarų deriniai",
-                "Komanda verta tolesnės analizės",
-                "Demonstracinė Eurolygos komandos analizė",
-                8, 7
+            ScoutingReport(
+                entry_id=entries[4].id,
+                scout_name="Skautas B",
+                observation_date=date(2026, 9, 24),
+                strengths="Geras puolimo organizavimas",
+                weaknesses="Pasitaiko klaidų ginantis perimetre",
+                insights="Efektyviai naudojami užtvarų deriniai",
+                conclusion="Komanda verta tolesnės analizės",
+                statistics_note="Demonstracinė Eurolygos komandos analizė",
+                offense_rating=8,
+                defense_rating=7,
             ),
-            (
-                6, "Skautas A", date(2026, 9, 27),
-                "Gera kova dėl atšokusių kamuolių",
-                "Ribotas metimo nuotolis",
-                "Sėkmingai saugo baudos aikštelę",
-                "Perspektyvus gynybinis aukštaūgis",
-                "Demonstracinė aukštaūgio analizė",
-                6, 9
+            ScoutingReport(
+                entry_id=entries[6].id,
+                scout_name="Skautas A",
+                observation_date=date(2026, 9, 27),
+                strengths="Gera kova dėl atšokusių kamuolių",
+                weaknesses="Ribotas metimo nuotolis",
+                insights="Sėkmingai saugo baudos aikštelę",
+                conclusion="Perspektyvus gynybinis aukštaūgis",
+                statistics_note="Demonstracinė aukštaūgio analizė",
+                offense_rating=6,
+                defense_rating=9,
             ),
-            (
-                8, "Skautas C", date(2026, 10, 1),
-                "Gera pagalba komandos draugams",
-                "Kartais vėluoja gynybiniai keitimai",
-                "Efektyvūs dvigubinimai",
-                "Reikia gerinti komunikaciją",
-                "Demonstracinė komandinės gynybos analizė",
-                7, 8
+            ScoutingReport(
+                entry_id=entries[8].id,
+                scout_name="Skautas C",
+                observation_date=date(2026, 10, 1),
+                strengths="Gera pagalba komandos draugams",
+                weaknesses="Kartais vėluoja gynybiniai keitimai",
+                insights="Efektyvūs dvigubinimai",
+                conclusion="Reikia gerinti komunikaciją",
+                statistics_note="Demonstracinė komandinės gynybos analizė",
+                offense_rating=7,
+                defense_rating=8,
             ),
-            (
-                9, "Skautas B", date(2026, 10, 5),
-                "Geras metimas ir greitas pirmas žingsnis",
-                "Silpnesnė gynyba prieš fiziškus varžovus",
-                "Geba susikurti metimo situacijas",
-                "Perspektyvus atakuojantis gynėjas",
-                "Demonstracinė individualaus puolimo analizė",
-                9, 6
-            )
+            ScoutingReport(
+                entry_id=entries[9].id,
+                scout_name="Skautas B",
+                observation_date=date(2026, 10, 5),
+                strengths="Geras metimas ir greitas pirmas žingsnis",
+                weaknesses="Silpnesnė gynyba prieš fiziškus varžovus",
+                insights="Geba susikurti metimo situacijas",
+                conclusion="Perspektyvus atakuojantis gynėjas",
+                statistics_note="Demonstracinė individualaus puolimo analizė",
+                offense_rating=9,
+                defense_rating=6,
+            ),
         ]
-
-        reports = []
-
-        for (
-            entry_index,
-            scout_name,
-            observation_date,
-            strengths,
-            weaknesses,
-            insights,
-            conclusion,
-            statistics_note,
-            offense_rating,
-            defense_rating
-        ) in reports_data:
-
-            report = ScoutingReport(
-                entry_id=entries[entry_index].id,
-                scout_name=scout_name,
-                observation_date=observation_date,
-                strengths=strengths,
-                weaknesses=weaknesses,
-                insights=insights,
-                conclusion=conclusion,
-                statistics_note=statistics_note,
-                offense_rating=offense_rating,
-                defense_rating=defense_rating
-            )
-
-            reports.append(report)
 
         session.add_all(reports)
 
-        # Visus duomenis išsaugome PostgreSQL
+        # Patvirtinamas visų demonstracinių įrašų įrašymas.
         session.commit()
 
         print("Demonstraciniai duomenys sėkmingai įkelti!")
