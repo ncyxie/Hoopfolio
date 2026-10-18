@@ -1,0 +1,293 @@
+{
+  "info": {
+    "name": "Hoopfolio | REST API užklausų kolekcija",
+    "description": "Hoopfolio REST API užklausos laboratorinio darbo L1 funkcionalumui tikrinti: CRUD, filtravimas, puslapiavimas, validacija ir HTTP atsako kodai.\n\nBazinis adresas: http://127.0.0.1:8000\nNaudojimas: užklausos vykdomos nurodyta tvarka. Po POST operacijų gauti ID rankiniu būdu įrašomi į kolekcijos kintamuosius watchlistId, entryId ir reportId. POST ir PUT užklausose pateikti JSON duomenų pavyzdžiai. DELETE užklausos skirtos sukurtiems bandomiesiems įrašams pašalinti.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 | CRUD ir sąrašų gavimas",
+      "description": "15 užklausų trims susijusiems objektams: Watchlist, WatchlistEntry ir ScoutingReport.",
+      "item": [
+        {
+          "name": "01. POST – Sukurti stebėjimo sąrašą",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "http://127.0.0.1:8000/watchlists",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman L1\",\n  \"purpose\": \"Bandomasis sąrašas rankiniam API testavimui\",\n  \"owner_name\": \"Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Sukuria stebėjimo sąrašą (201). Gautas id naudojamas kaip watchlistId."
+          }
+        },
+        {
+          "name": "02. GET – Stebėjimo sąrašai",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://127.0.0.1:8000/watchlists?name=Postman%20L1&page=1&per_page=2",
+            "description": "Grąžina stebėjimo sąrašus su pavadinimo filtru ir puslapiavimu (200)."
+          }
+        },
+        {
+          "name": "03. GET – Stebėjimo sąrašas pagal ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://127.0.0.1:8000/watchlists/{{watchlistId}}",
+            "description": "Grąžina pasirinktą stebėjimo sąrašą pagal watchlistId (200)."
+          }
+        },
+        {
+          "name": "04. PUT – Atnaujinti stebėjimo sąrašą",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "http://127.0.0.1:8000/watchlists/{{watchlistId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman L1 atnaujintas sąrašas\",\n  \"purpose\": \"Atnaujinta paskirtis per PUT\",\n  \"owner_name\": \"Postman testas\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Atnaujina stebėjimo sąrašo duomenis (200)."
+          }
+        },
+        {
+          "name": "05. POST – Pridėti stebimą objektą",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "http://127.0.0.1:8000/watchlists/{{watchlistId}}/entries",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target_type\": \"player\",\n  \"target_name\": \"Postman bandomasis žaidėjas\",\n  \"status\": \"watching\",\n  \"priority\": \"high\",\n  \"context\": \"Vertinamas žaidimo organizavimas ir sprendimai gynyboje.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Prideda stebimą objektą į pasirinktą sąrašą (201). Gautas id naudojamas kaip entryId."
+          }
+        },
+        {
+          "name": "06. GET – Stebimi objektai",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://127.0.0.1:8000/watchlists/{{watchlistId}}/entries?target_type=player&status=watching&priority=high&page=1&per_page=10",
+            "description": "Grąžina sąrašo objektus su tipo, būsenos, prioriteto filtrais ir puslapiavimu (200)."
+          }
+        },
+        {
+          "name": "07. GET – Stebimas objektas pagal ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://127.0.0.1:8000/watchlists/{{watchlistId}}/entries/{{entryId}}",
+            "description": "Grąžina pasirinktą stebimą objektą pagal entryId (200)."
+          }
+        },
+        {
+          "name": "08. PUT – Atnaujinti stebimą objektą",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "http://127.0.0.1:8000/watchlists/{{watchlistId}}/entries/{{entryId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target_type\": \"player\",\n  \"target_name\": \"Postman atnaujintas žaidėjas\",\n  \"status\": \"closed\",\n  \"priority\": \"medium\",\n  \"context\": \"Atnaujinta per PUT\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Atnaujina stebimo objekto duomenis (200)."
+          }
+        },
+        {
+          "name": "09. POST – Sukurti skautavimo ataskaitą",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "http://127.0.0.1:8000/watchlists/{{watchlistId}}/entries/{{entryId}}/reports",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scout_name\": \"Postman skautas\",\n  \"observation_date\": \"2026-10-13\",\n  \"strengths\": \"Geras kamuolio valdymas\",\n  \"weaknesses\": \"Tobulintina gynyba\",\n  \"insights\": \"Gera žaidimo vizija\",\n  \"conclusion\": \"Verta stebėti toliau\",\n  \"statistics_note\": \"Demonstraciniai duomenys\",\n  \"offense_rating\": 8,\n  \"defense_rating\": 7\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Sukuria skautavimo ataskaitą pasirinktame objekte (201). Gautas id naudojamas kaip reportId."
+          }
+        },
+        {
+          "name": "10. GET – Skautavimo ataskaitos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://127.0.0.1:8000/watchlists/{{watchlistId}}/entries/{{entryId}}/reports?scout_name=Postman%20skautas&page=1&per_page=10",
+            "description": "Grąžina objekto ataskaitas su autoriaus filtru ir puslapiavimu (200)."
+          }
+        },
+        {
+          "name": "11. GET – Skautavimo ataskaita pagal ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://127.0.0.1:8000/watchlists/{{watchlistId}}/entries/{{entryId}}/reports/{{reportId}}",
+            "description": "Grąžina pasirinktą skautavimo ataskaitą pagal reportId (200)."
+          }
+        },
+        {
+          "name": "12. PUT – Atnaujinti skautavimo ataskaitą",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "http://127.0.0.1:8000/watchlists/{{watchlistId}}/entries/{{entryId}}/reports/{{reportId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scout_name\": \"Postman analitikas\",\n  \"observation_date\": \"2026-10-13\",\n  \"strengths\": \"Tikslūs perdavimai\",\n  \"weaknesses\": \"Trūksta stabilumo\",\n  \"insights\": \"Pastebimas progresas\",\n  \"conclusion\": \"Rekomenduojama toliau vertinti\",\n  \"statistics_note\": \"Atnaujinti demonstraciniai duomenys\",\n  \"offense_rating\": 9,\n  \"defense_rating\": 7\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Atnaujina skautavimo ataskaitos duomenis (200)."
+          }
+        },
+        {
+          "name": "13. DELETE – Ištrinti skautavimo ataskaitą",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "http://127.0.0.1:8000/watchlists/{{watchlistId}}/entries/{{entryId}}/reports/{{reportId}}",
+            "description": "Pašalina pasirinktą skautavimo ataskaitą (204 No Content)."
+          }
+        },
+        {
+          "name": "14. DELETE – Ištrinti stebimą objektą",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "http://127.0.0.1:8000/watchlists/{{watchlistId}}/entries/{{entryId}}",
+            "description": "Pašalina pasirinktą stebimą objektą (204 No Content)."
+          }
+        },
+        {
+          "name": "15. DELETE – Ištrinti stebėjimo sąrašą",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "http://127.0.0.1:8000/watchlists/{{watchlistId}}",
+            "description": "Pašalina pasirinktą stebėjimo sąrašą (204 No Content)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 | Papildomi patikrinimai",
+      "description": "Suvestinė, užklausos validacija, neegzistuojantis resursas ir OpenAPI specifikacija.",
+      "item": [
+        {
+          "name": "16. GET – Duomenų suvestinė",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://127.0.0.1:8000/dashboard",
+            "description": "Grąžina suvestinius kelių objektų duomenis (200)."
+          }
+        },
+        {
+          "name": "17. GET – Neteisingas puslapio numeris",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://127.0.0.1:8000/watchlists?page=0",
+            "description": "Tikrina puslapio numerio validaciją: page=0 grąžina 422."
+          }
+        },
+        {
+          "name": "18. GET – Neegzistuojantis sąrašas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://127.0.0.1:8000/watchlists/999999999",
+            "description": "Tikrina neegzistuojančio sąrašo apdorojimą (404)."
+          }
+        },
+        {
+          "name": "19. GET – OpenAPI specifikacija",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://127.0.0.1:8000/openapi.json",
+            "description": "Grąžina sugeneruotą API OpenAPI specifikaciją JSON formatu (200)."
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "watchlistId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "entryId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "reportId",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
