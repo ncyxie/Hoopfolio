@@ -1,13 +1,13 @@
 {
   "info": {
-    "name": "Hoopfolio | REST API užklausų kolekcija",
-    "description": "Hoopfolio REST API užklausos laboratorinio darbo L1 funkcionalumui tikrinti: CRUD, filtravimas, puslapiavimas, validacija ir HTTP atsako kodai.\n\nBazinis adresas: http://127.0.0.1:8000\nNaudojimas: užklausos vykdomos nurodyta tvarka. Po POST operacijų gauti ID rankiniu būdu įrašomi į kolekcijos kintamuosius watchlistId, entryId ir reportId. POST ir PUT užklausose pateikti JSON duomenų pavyzdžiai. DELETE užklausos skirtos sukurtiems bandomiesiems įrašams pašalinti.",
+    "name": "Hoopfolio L1 | API testai",
+    "description": "15 CRUD/LIST testų ir 4 papildomi patikrinimai. Vykdymas: Postman Collection Runner, 1 iteracija, be delsos. API: http://127.0.0.1:8000. Testiniai duomenys sukuriami ir pašalinami automatiškai.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
-      "name": "01 | CRUD ir sąrašų gavimas",
-      "description": "15 užklausų trims susijusiems objektams: Watchlist, WatchlistEntry ir ScoutingReport.",
+      "name": "01 | CRUD ir LIST (15)",
+      "description": "Pagrindiniai CRUD/LIST testai; vykdomi nurodyta tvarka.",
       "item": [
         {
           "name": "01. POST – Sukurti stebėjimo sąrašą",
@@ -22,15 +22,42 @@
             "url": "http://127.0.0.1:8000/watchlists",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Postman L1\",\n  \"purpose\": \"Bandomasis sąrašas rankiniam API testavimui\",\n  \"owner_name\": \"Postman\"\n}",
+              "raw": "{\n  \"name\": \"Postman L1\",\n  \"purpose\": \"REST API CRUD testas\",\n  \"owner_name\": \"Postman\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             },
-            "description": "Sukuria stebėjimo sąrašą (201). Gautas id naudojamas kaip watchlistId."
-          }
+            "description": "201; sukuriamas sąrašas, išsaugomas watchlistId."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.unset(\"watchlistId\");",
+                  "pm.collectionVariables.unset(\"entryId\");",
+                  "pm.collectionVariables.unset(\"reportId\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set(\"watchlistId\", String(pm.response.json().id));",
+                  "}"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "02. GET – Stebėjimo sąrašai",
@@ -38,8 +65,22 @@
             "method": "GET",
             "header": [],
             "url": "http://127.0.0.1:8000/watchlists?name=Postman%20L1&page=1&per_page=2",
-            "description": "Grąžina stebėjimo sąrašus su pavadinimo filtru ir puslapiavimu (200)."
-          }
+            "description": "200; pavadinimo filtras ir puslapiavimas."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK: sąrašas\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json()).to.be.an(\"array\");",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "03. GET – Stebėjimo sąrašas pagal ID",
@@ -47,8 +88,22 @@
             "method": "GET",
             "header": [],
             "url": "http://127.0.0.1:8000/watchlists/{{watchlistId}}",
-            "description": "Grąžina pasirinktą stebėjimo sąrašą pagal watchlistId (200)."
-          }
+            "description": "200; sąrašas pagal ID."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK: sąrašas pagal ID\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(String(pm.response.json().id)).to.eql(pm.collectionVariables.get(\"watchlistId\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "04. PUT – Atnaujinti stebėjimo sąrašą",
@@ -70,8 +125,22 @@
                 }
               }
             },
-            "description": "Atnaujina stebėjimo sąrašo duomenis (200)."
-          }
+            "description": "200; atnaujinami sąrašo duomenys."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK: sąrašas atnaujintas\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().name).to.eql(\"Postman L1 atnaujintas sąrašas\");",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "05. POST – Pridėti stebimą objektą",
@@ -93,8 +162,24 @@
                 }
               }
             },
-            "description": "Prideda stebimą objektą į pasirinktą sąrašą (201). Gautas id naudojamas kaip entryId."
-          }
+            "description": "201; sukuriamas objektas, išsaugomas entryId."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set(\"entryId\", String(pm.response.json().id));",
+                  "}"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "06. GET – Stebimi objektai",
@@ -102,8 +187,22 @@
             "method": "GET",
             "header": [],
             "url": "http://127.0.0.1:8000/watchlists/{{watchlistId}}/entries?target_type=player&status=watching&priority=high&page=1&per_page=10",
-            "description": "Grąžina sąrašo objektus su tipo, būsenos, prioriteto filtrais ir puslapiavimu (200)."
-          }
+            "description": "200; objektų filtravimas ir puslapiavimas."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK: objektų sąrašas\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json()).to.be.an(\"array\");",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "07. GET – Stebimas objektas pagal ID",
@@ -111,8 +210,22 @@
             "method": "GET",
             "header": [],
             "url": "http://127.0.0.1:8000/watchlists/{{watchlistId}}/entries/{{entryId}}",
-            "description": "Grąžina pasirinktą stebimą objektą pagal entryId (200)."
-          }
+            "description": "200; objektas pagal ID."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK: objektas pagal ID\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(String(pm.response.json().id)).to.eql(pm.collectionVariables.get(\"entryId\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "08. PUT – Atnaujinti stebimą objektą",
@@ -134,8 +247,22 @@
                 }
               }
             },
-            "description": "Atnaujina stebimo objekto duomenis (200)."
-          }
+            "description": "200; atnaujinami objekto duomenys."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK: objektas atnaujintas\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql(\"closed\");",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "09. POST – Sukurti skautavimo ataskaitą",
@@ -157,8 +284,24 @@
                 }
               }
             },
-            "description": "Sukuria skautavimo ataskaitą pasirinktame objekte (201). Gautas id naudojamas kaip reportId."
-          }
+            "description": "201; sukuriama ataskaita, išsaugomas reportId."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set(\"reportId\", String(pm.response.json().id));",
+                  "}"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "10. GET – Skautavimo ataskaitos",
@@ -166,8 +309,22 @@
             "method": "GET",
             "header": [],
             "url": "http://127.0.0.1:8000/watchlists/{{watchlistId}}/entries/{{entryId}}/reports?scout_name=Postman%20skautas&page=1&per_page=10",
-            "description": "Grąžina objekto ataskaitas su autoriaus filtru ir puslapiavimu (200)."
-          }
+            "description": "200; ataskaitų filtravimas ir puslapiavimas."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK: ataskaitų sąrašas\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json()).to.be.an(\"array\");",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "11. GET – Skautavimo ataskaita pagal ID",
@@ -175,8 +332,22 @@
             "method": "GET",
             "header": [],
             "url": "http://127.0.0.1:8000/watchlists/{{watchlistId}}/entries/{{entryId}}/reports/{{reportId}}",
-            "description": "Grąžina pasirinktą skautavimo ataskaitą pagal reportId (200)."
-          }
+            "description": "200; ataskaita pagal ID."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK: ataskaita pagal ID\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(String(pm.response.json().id)).to.eql(pm.collectionVariables.get(\"reportId\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "12. PUT – Atnaujinti skautavimo ataskaitą",
@@ -198,8 +369,22 @@
                 }
               }
             },
-            "description": "Atnaujina skautavimo ataskaitos duomenis (200)."
-          }
+            "description": "200; atnaujinama ataskaita."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK: ataskaita atnaujinta\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().scout_name).to.eql(\"Postman analitikas\");",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "13. DELETE – Ištrinti skautavimo ataskaitą",
@@ -207,8 +392,24 @@
             "method": "DELETE",
             "header": [],
             "url": "http://127.0.0.1:8000/watchlists/{{watchlistId}}/entries/{{entryId}}/reports/{{reportId}}",
-            "description": "Pašalina pasirinktą skautavimo ataskaitą (204 No Content)."
-          }
+            "description": "204; pašalinama ataskaita."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"204 No Content: ataskaita ištrinta\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});",
+                  "if (pm.response.code === 204) {",
+                  "    pm.collectionVariables.unset(\"reportId\");",
+                  "}"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "14. DELETE – Ištrinti stebimą objektą",
@@ -216,8 +417,24 @@
             "method": "DELETE",
             "header": [],
             "url": "http://127.0.0.1:8000/watchlists/{{watchlistId}}/entries/{{entryId}}",
-            "description": "Pašalina pasirinktą stebimą objektą (204 No Content)."
-          }
+            "description": "204; pašalinamas objektas."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"204 No Content: objektas ištrintas\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});",
+                  "if (pm.response.code === 204) {",
+                  "    pm.collectionVariables.unset(\"entryId\");",
+                  "}"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "15. DELETE – Ištrinti stebėjimo sąrašą",
@@ -225,14 +442,30 @@
             "method": "DELETE",
             "header": [],
             "url": "http://127.0.0.1:8000/watchlists/{{watchlistId}}",
-            "description": "Pašalina pasirinktą stebėjimo sąrašą (204 No Content)."
-          }
+            "description": "204; pašalinamas sąrašas."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"204 No Content: sąrašas ištrintas\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});",
+                  "if (pm.response.code === 204) {",
+                  "    pm.collectionVariables.unset(\"watchlistId\");",
+                  "}"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
     {
-      "name": "02 | Papildomi patikrinimai",
-      "description": "Suvestinė, užklausos validacija, neegzistuojantis resursas ir OpenAPI specifikacija.",
+      "name": "02 | Papildomi patikrinimai (4)",
+      "description": "Suvestinė, netinkamas JSON turinys (422), nerastas resursas (404) ir OpenAPI.",
       "item": [
         {
           "name": "16. GET – Duomenų suvestinė",
@@ -240,17 +473,57 @@
             "method": "GET",
             "header": [],
             "url": "http://127.0.0.1:8000/dashboard",
-            "description": "Grąžina suvestinius kelių objektų duomenis (200)."
-          }
+            "description": "200; suvestiniai duomenys."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK: suvestinė\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "17. GET – Neteisingas puslapio numeris",
+          "name": "17. POST – Netinkami duomenys (422)",
           "request": {
-            "method": "GET",
-            "header": [],
-            "url": "http://127.0.0.1:8000/watchlists?page=0",
-            "description": "Tikrina puslapio numerio validaciją: page=0 grąžina 422."
-          }
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "http://127.0.0.1:8000/watchlists",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "422; netinkamas POST turinys."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422: netinkami duomenys\", function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "18. GET – Neegzistuojantis sąrašas",
@@ -258,8 +531,21 @@
             "method": "GET",
             "header": [],
             "url": "http://127.0.0.1:8000/watchlists/999999999",
-            "description": "Tikrina neegzistuojančio sąrašo apdorojimą (404)."
-          }
+            "description": "404; neegzistuojantis sąrašas."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404: resursas nerastas\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "19. GET – OpenAPI specifikacija",
@@ -267,8 +553,21 @@
             "method": "GET",
             "header": [],
             "url": "http://127.0.0.1:8000/openapi.json",
-            "description": "Grąžina sugeneruotą API OpenAPI specifikaciją JSON formatu (200)."
-          }
+            "description": "200; OpenAPI specifikacija."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK: OpenAPI\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     }
