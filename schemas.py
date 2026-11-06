@@ -1,4 +1,3 @@
-
 from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
@@ -24,6 +23,7 @@ class WatchlistResponse(BaseModel):
     name: str
     purpose: str
     owner_name: str
+    owner_id: int | None
     created_at: datetime
 
     # HATEOAS - nuorodos į sąrašą ir jo stebimus objektus
@@ -95,6 +95,7 @@ class ScoutingReportResponse(ScoutingReportCreate):
 
     id: int
     entry_id: int
+    author_id: int | None
 
     # Reikalingas HATEOAS adresams, bet JSON atskirai nerodomas
     watchlist_id: int = Field(exclude=True)

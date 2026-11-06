@@ -100,9 +100,16 @@ DB_PASSWORD="JUSU_SLAPTAZODIS"
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=hoopfolio
+JWT_SECRET=IRASYKITE_SUGENERUOTA_SLAPTA_RAKTA
 ```
 
-Sukurti lenteles ir įkelti demonstracinius duomenis:
+Jeigu naudojama senoji L1 demonstracinė duomenų bazė, ją galima perkurti nuo nulio (visi ankstesni projekto duomenys bus ištrinti):
+
+```powershell
+python -c "from database import engine; from models import Base; Base.metadata.drop_all(bind=engine)"
+```
+
+Sukurti lenteles pagal dabartinius modelius ir įkelti demonstracinius duomenis:
 
 ```powershell
 python -c "from database import engine; from models import Base; Base.metadata.create_all(bind=engine)"
@@ -122,4 +129,53 @@ python -m uvicorn main:app --reload
 
 - Swagger UI: http://127.0.0.1:8000/docs
 - OpenAPI: http://127.0.0.1:8000/openapi.json
-- Postman testų kolekcija: `postman/` kataloge. Paleisti veikiančiam API serveriui naudojant **Collection Runner** (1 iteracija).
+- Postman: `postman/Hoopfolio_L1_Postman_Kolekcija.json` – L1 testų kolekcija; L2 versijoje apsaugotiems metodams reikalingas JWT.
+
+## 4. Antrasis laboratorinis darbas – autentifikacija ir autorizacija
+
+Įgyvendinta JWT autentifikacija ir prieigos kontrolė pagal naudotojo rolę bei objekto savininko ID. Slaptažodžiai saugomi naudojant **Argon2** maišą.
+
+### 4.1. Autentifikacija
+
+| Metodas | Paskirtis |
+|---|---|
+| `POST /auth/register` | Naudotojo registracija su `reader` role |
+| `POST /auth/login` | Prisijungimas ir žetonų išdavimas |
+| `POST /auth/refresh` | Žetonų atnaujinimas |
+| `POST /auth/logout` | Prisijungimo atšaukimas |
+| `GET /auth/me` | Prisijungusio naudotojo informacija |
+
+- **Access token** – `HS256` algoritmu pasirašytas JWT su naudotojo ID, role ir galiojimo laiku (**15 min.**). Perduodamas `Authorization: Bearer` antraštėje.
+- **Refresh token** – galioja **7 dienas**, panaudojus pakeičiamas nauju. Duomenų bazėje saugoma jo SHA-256 maiša.
+- Prisijungimų būsena valdoma `login_sessions` lentelėje; atsijungus žetonai nebegalioja.
+
+### 4.2. Prieigos teisės
+
+| Rolė | Teisės |
+|---|---|
+| `reader` | Duomenų peržiūra |
+| `analyst` | Savo sąrašų ir ataskaitų kūrimas bei valdymas |
+| `admin` | Visų objektų ir naudotojų rolių valdymas |
+
+Sąrašų savininkai tikrinami pagal `owner_id`, ataskaitų autoriai – pagal `author_id`. Naudotojų administravimui skirti `GET /admin/users` ir `PUT /admin/users/{user_id}/role` metodai.
+
+### 4.3. Pradinis naudotojų paruošimas ir demonstracija
+
+`JWT_SECRET` nustatomas `.env` faile (žr. 3.2 skyrių). Raktą galima sugeneruoti taip:
+
+```powershell
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+Paleidus API, per [Swagger UI](http://127.0.0.1:8000/docs) (`POST /auth/register`) užregistruoti demonstracinius naudotojus, pavyzdžiui, `skautas@example.com`, `analyst@example.com` ir `reader@example.com`. Naujos paskyros gauna `reader` rolę.
+
+Administratoriaus ir analitiko rolės priskiriamos terminale:
+
+```powershell
+python set_role.py skautas@example.com admin
+python set_role.py analyst@example.com analyst
+```
+
+Per `POST /auth/login` prisijungti su pasirinkta paskyra ir gautą `access_token` įvesti Swagger **Authorize** lange. Pakeitus rolę, būtina prisijungti iš naujo.
+
+Demonstracijai naudojami `GET /auth/me`, `GET /admin/users`, `POST /watchlists`, `POST /auth/refresh` ir `POST /auth/logout`. `reader` negali kurti sąrašų, `analyst` gali valdyti savo objektus, o `admin` – visus. Senieji `seed.py` įrašai neturi `owner_id`, todėl juos valdo administratorius; analitiko savininko teisių patikrai sukuriamas naujas sąrašas.

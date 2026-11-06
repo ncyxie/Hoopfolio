@@ -1,6 +1,9 @@
 from enum import Enum
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, Date, ForeignKey, CheckConstraint, func
+from sqlalchemy import (
+    BigInteger, Boolean, CheckConstraint, Column, Date, DateTime,
+    ForeignKey, Integer, String, Text, func,
+)
 from sqlalchemy import Enum as SqlEnum
 from sqlalchemy.orm import DeclarativeBase
 
@@ -26,6 +29,35 @@ class Priority(str, Enum):
     high = "high"
 
 
+class UserRole(str, Enum):
+    reader = "reader"
+    analyst = "analyst"
+    admin = "admin"
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True)
+    email = Column(String(255), unique=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    role = Column(
+        SqlEnum(UserRole, name="user_role_enum"),
+        nullable=False,
+        default=UserRole.reader,
+    )
+
+
+class LoginSession(Base):
+    __tablename__ = "login_sessions"
+
+    id = Column(String(32), primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    refresh_hash = Column(String(64), unique=True, nullable=False)
+    expires_at = Column(BigInteger, nullable=False)
+    revoked = Column(Boolean, nullable=False, default=False)
+
+
 class Watchlist(Base):
     __tablename__ = "watchlists"
 
@@ -33,6 +65,8 @@ class Watchlist(Base):
     name = Column(String(100), nullable=False)
     purpose = Column(Text, nullable=False)
     owner_name = Column(String(100), nullable=False)
+    # Tikrasis savininkas yra User ID, o ne laisvai įrašytas owner_name.
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -55,6 +89,8 @@ class ScoutingReport(Base):
     entry_id = Column(Integer, ForeignKey("watchlist_entries.id"), nullable=False)
 
     scout_name = Column(String(100), nullable=False)
+    # Kas sukūrė ataskaitą (skiriasi nuo laisvai įrašomo scout_name).
+    author_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     observation_date = Column(Date, nullable=False)
 
     strengths = Column(Text, nullable=False)

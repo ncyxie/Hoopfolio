@@ -1,9 +1,14 @@
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Depends
+from pydantic import BaseModel
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
+from auth import router as auth_router, get_current_user, UserResponse
 from database import engine
-from models import Watchlist, WatchlistEntry, ScoutingReport, TargetType, EntryStatus, Priority
+from models import (
+    Watchlist, WatchlistEntry, ScoutingReport,
+    TargetType, EntryStatus, Priority, User, UserRole,
+)
 from schemas import (
     WatchlistCreate,
     WatchlistResponse,
@@ -15,6 +20,36 @@ from schemas import (
 
 
 app = FastAPI(title="Hoopfolio API")
+app.include_router(auth_router)
+
+
+# --------------------------------------------------
+# AUTORIZACIJOS TAISYKLĖS
+# --------------------------------------------------
+
+def require_editor(user: User):
+    # Reader gali tik skaityti, analyst ir admin gali rašyti.
+    if user.role not in (UserRole.analyst, UserRole.admin):
+        raise HTTPException(
+            status_code=403,
+            detail="Reikia analitiko arba administratoriaus teisių",
+        )
+
+
+def require_watchlist_owner(watchlist: Watchlist | None, user: User):
+    if watchlist is None:
+        raise HTTPException(status_code=404, detail="Stebėjimo sąrašas nerastas")
+
+    # Admin gali valdyti visus sąrašus, analyst - tik savo.
+    if user.role != UserRole.admin and watchlist.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="Negalite keisti svetimo stebėjimo sąrašo")
+
+
+def require_report_author(report: ScoutingReport, user: User):
+    # Admin gali keisti visas ataskaitas, analyst - tik savo.
+    if user.role != UserRole.admin and report.author_id != user.id:
+        raise HTTPException(status_code=403, detail="Negalite keisti svetimos ataskaitos")
+
 
 
 # --------------------------------------------------
@@ -36,6 +71,7 @@ def get_watchlists(
     page: int = Query(default=1, ge=1),
     per_page: int = Query(default=10, ge=1, le=100),
     name: str | None = None,
+    user: User = Depends(get_current_user),
 ):
     with Session(engine) as session:
         statement = select(Watchlist)
@@ -52,12 +88,15 @@ def get_watchlists(
 
 # 2. Sukurti naują sąrašą
 @app.post("/watchlists", response_model=WatchlistResponse, status_code=201)
-def create_watchlist(data: WatchlistCreate):
+def create_watchlist(data: WatchlistCreate, user: User = Depends(get_current_user)):
+    require_editor(user)
+
     with Session(engine) as session:
         new_watchlist = Watchlist(
             name=data.name,
             purpose=data.purpose,
             owner_name=data.owner_name,
+            owner_id=user.id,
         )
 
         session.add(new_watchlist)
@@ -69,7 +108,7 @@ def create_watchlist(data: WatchlistCreate):
 
 # 3. Gauti vieną sąrašą
 @app.get("/watchlists/{watchlist_id}", response_model=WatchlistResponse)
-def get_watchlist(watchlist_id: int):
+def get_watchlist(watchlist_id: int, user: User = Depends(get_current_user)):
     with Session(engine) as session:
         watchlist = session.get(Watchlist, watchlist_id)
 
@@ -81,12 +120,20 @@ def get_watchlist(watchlist_id: int):
 
 # 4. Atnaujinti sąrašą
 @app.put("/watchlists/{watchlist_id}", response_model=WatchlistResponse)
-def update_watchlist(watchlist_id: int, data: WatchlistCreate):
+def update_watchlist(
+    watchlist_id: int,
+    data: WatchlistCreate,
+    user: User = Depends(get_current_user),
+):
+    require_editor(user)
+
     with Session(engine) as session:
         watchlist = session.get(Watchlist, watchlist_id)
 
         if watchlist is None:
             raise HTTPException(status_code=404, detail="Stebėjimo sąrašas nerastas")
+
+        require_watchlist_owner(watchlist, user)
 
         watchlist.name = data.name
         watchlist.purpose = data.purpose
@@ -99,12 +146,16 @@ def update_watchlist(watchlist_id: int, data: WatchlistCreate):
 
 # 5. Ištrinti sąrašą
 @app.delete("/watchlists/{watchlist_id}", status_code=204)
-def delete_watchlist(watchlist_id: int):
+def delete_watchlist(watchlist_id: int, user: User = Depends(get_current_user)):
+    require_editor(user)
+
     with Session(engine) as session:
         watchlist = session.get(Watchlist, watchlist_id)
 
         if watchlist is None:
             raise HTTPException(status_code=404, detail="Stebėjimo sąrašas nerastas")
+
+        require_watchlist_owner(watchlist, user)
 
         # Negalima trinti sąrašo, kuriame dar yra stebimų objektų.
         statement = select(WatchlistEntry.id)
@@ -134,6 +185,7 @@ def get_watchlist_entries(
     target_type: TargetType | None = None,
     status: EntryStatus | None = None,
     priority: Priority | None = None,
+    user: User = Depends(get_current_user),
 ):
     with Session(engine) as session:
         watchlist = session.get(Watchlist, watchlist_id)
@@ -167,12 +219,20 @@ def get_watchlist_entries(
     response_model=WatchlistEntryResponse,
     status_code=201,
 )
-def create_watchlist_entry(watchlist_id: int, data: WatchlistEntryCreate):
+def create_watchlist_entry(
+    watchlist_id: int,
+    data: WatchlistEntryCreate,
+    user: User = Depends(get_current_user),
+):
+    require_editor(user)
+
     with Session(engine) as session:
         watchlist = session.get(Watchlist, watchlist_id)
 
         if watchlist is None:
             raise HTTPException(status_code=404, detail="Stebėjimo sąrašas nerastas")
+
+        require_watchlist_owner(watchlist, user)
 
         new_entry = WatchlistEntry(
             watchlist_id=watchlist_id,
@@ -194,7 +254,7 @@ def create_watchlist_entry(watchlist_id: int, data: WatchlistEntryCreate):
     "/watchlists/{watchlist_id}/entries/{entry_id}",
     response_model=WatchlistEntryResponse,
 )
-def get_watchlist_entry(watchlist_id: int, entry_id: int):
+def get_watchlist_entry(watchlist_id: int, entry_id: int, user: User = Depends(get_current_user)):
     with Session(engine) as session:
         entry = session.get(WatchlistEntry, entry_id)
 
@@ -210,12 +270,22 @@ def get_watchlist_entry(watchlist_id: int, entry_id: int):
     "/watchlists/{watchlist_id}/entries/{entry_id}",
     response_model=WatchlistEntryResponse,
 )
-def update_watchlist_entry(watchlist_id: int, entry_id: int, data: WatchlistEntryCreate):
+def update_watchlist_entry(
+    watchlist_id: int,
+    entry_id: int,
+    data: WatchlistEntryCreate,
+    user: User = Depends(get_current_user),
+):
+    require_editor(user)
+
     with Session(engine) as session:
         entry = session.get(WatchlistEntry, entry_id)
 
         if entry is None or entry.watchlist_id != watchlist_id:
             raise HTTPException(status_code=404, detail="Stebimas objektas šiame sąraše nerastas")
+
+        watchlist = session.get(Watchlist, watchlist_id)
+        require_watchlist_owner(watchlist, user)
 
         entry.target_type = data.target_type
         entry.target_name = data.target_name
@@ -230,12 +300,21 @@ def update_watchlist_entry(watchlist_id: int, entry_id: int, data: WatchlistEntr
 
 # 5. Ištrinti stebimą objektą
 @app.delete("/watchlists/{watchlist_id}/entries/{entry_id}", status_code=204)
-def delete_watchlist_entry(watchlist_id: int, entry_id: int):
+def delete_watchlist_entry(
+    watchlist_id: int,
+    entry_id: int,
+    user: User = Depends(get_current_user),
+):
+    require_editor(user)
+
     with Session(engine) as session:
         entry = session.get(WatchlistEntry, entry_id)
 
         if entry is None or entry.watchlist_id != watchlist_id:
             raise HTTPException(status_code=404, detail="Stebimas objektas šiame sąraše nerastas")
+
+        watchlist = session.get(Watchlist, watchlist_id)
+        require_watchlist_owner(watchlist, user)
 
         # Negalima trinti objekto, kuris turi ataskaitų.
         statement = select(ScoutingReport.id)
@@ -267,6 +346,7 @@ def get_scouting_reports(
     page: int = Query(default=1, ge=1),
     per_page: int = Query(default=10, ge=1, le=100),
     scout_name: str | None = None,
+    user: User = Depends(get_current_user),
 ):
     with Session(engine) as session:
         entry = session.get(WatchlistEntry, entry_id)
@@ -300,15 +380,26 @@ def get_scouting_reports(
     response_model=ScoutingReportResponse,
     status_code=201,
 )
-def create_scouting_report(watchlist_id: int, entry_id: int, data: ScoutingReportCreate):
+def create_scouting_report(
+    watchlist_id: int,
+    entry_id: int,
+    data: ScoutingReportCreate,
+    user: User = Depends(get_current_user),
+):
+    require_editor(user)
+
     with Session(engine) as session:
         entry = session.get(WatchlistEntry, entry_id)
 
         if entry is None or entry.watchlist_id != watchlist_id:
             raise HTTPException(status_code=404, detail="Stebimas objektas šiame sąraše nerastas")
 
+        watchlist = session.get(Watchlist, watchlist_id)
+        require_watchlist_owner(watchlist, user)
+
         new_report = ScoutingReport(
             entry_id=entry_id,
+            author_id=user.id,
             scout_name=data.scout_name,
             observation_date=data.observation_date,
             strengths=data.strengths,
@@ -324,7 +415,7 @@ def create_scouting_report(watchlist_id: int, entry_id: int, data: ScoutingRepor
         session.commit()
         session.refresh(new_report)
 
-        # Pridedame sąrašo ID tik atsakymo nuorodoms (ne DB lentelei).
+        # Pridedame sąrašo ID tik atsakymo nuorodoms.
         new_report.watchlist_id = watchlist_id
         return new_report
 
@@ -334,7 +425,12 @@ def create_scouting_report(watchlist_id: int, entry_id: int, data: ScoutingRepor
     "/watchlists/{watchlist_id}/entries/{entry_id}/reports/{report_id}",
     response_model=ScoutingReportResponse,
 )
-def get_scouting_report(watchlist_id: int, entry_id: int, report_id: int):
+def get_scouting_report(
+    watchlist_id: int,
+    entry_id: int,
+    report_id: int,
+    user: User = Depends(get_current_user),
+):
     with Session(engine) as session:
         entry = session.get(WatchlistEntry, entry_id)
 
@@ -361,7 +457,10 @@ def update_scouting_report(
     entry_id: int,
     report_id: int,
     data: ScoutingReportCreate,
+    user: User = Depends(get_current_user),
 ):
+    require_editor(user)
+
     with Session(engine) as session:
         entry = session.get(WatchlistEntry, entry_id)
 
@@ -372,6 +471,8 @@ def update_scouting_report(
 
         if report is None or report.entry_id != entry_id:
             raise HTTPException(status_code=404, detail="Skautavimo ataskaita nerasta")
+
+        require_report_author(report, user)
 
         report.scout_name = data.scout_name
         report.observation_date = data.observation_date
@@ -396,7 +497,14 @@ def update_scouting_report(
     "/watchlists/{watchlist_id}/entries/{entry_id}/reports/{report_id}",
     status_code=204,
 )
-def delete_scouting_report(watchlist_id: int, entry_id: int, report_id: int):
+def delete_scouting_report(
+    watchlist_id: int,
+    entry_id: int,
+    report_id: int,
+    user: User = Depends(get_current_user),
+):
+    require_editor(user)
+
     with Session(engine) as session:
         entry = session.get(WatchlistEntry, entry_id)
 
@@ -408,6 +516,8 @@ def delete_scouting_report(watchlist_id: int, entry_id: int, report_id: int):
         if report is None or report.entry_id != entry_id:
             raise HTTPException(status_code=404, detail="Skautavimo ataskaita nerasta")
 
+        require_report_author(report, user)
+
         session.delete(report)
         session.commit()
 
@@ -417,7 +527,7 @@ def delete_scouting_report(watchlist_id: int, entry_id: int, report_id: int):
 # --------------------------------------------------
 
 @app.get("/dashboard")
-def get_dashboard():
+def get_dashboard(user: User = Depends(get_current_user)):
     with Session(engine) as session:
         # SQL užklausa suskaičiuoja, kiek kiekvienas sąrašas turi
         # stebimų objektų ir kiek tie objektai turi ataskaitų.
@@ -462,3 +572,40 @@ def get_dashboard():
             "total_reports": total_reports,
             "watchlists": watchlists,
         }
+
+
+# --------------------------------------------------
+# ADMINISTRATORIUS - NAUDOTOJŲ ROLĖS
+# --------------------------------------------------
+
+class ChangeRoleData(BaseModel):
+    role: UserRole
+
+
+@app.get("/admin/users", response_model=list[UserResponse])
+def get_users(user: User = Depends(get_current_user)):
+    if user.role != UserRole.admin:
+        raise HTTPException(status_code=403, detail="Tik administratoriui")
+
+    with Session(engine) as session:
+        return session.scalars(select(User).order_by(User.id)).all()
+
+
+@app.put("/admin/users/{user_id}/role", response_model=UserResponse)
+def change_user_role(
+    user_id: int,
+    data: ChangeRoleData,
+    user: User = Depends(get_current_user),
+):
+    if user.role != UserRole.admin:
+        raise HTTPException(status_code=403, detail="Tik administratoriui")
+
+    with Session(engine) as session:
+        target = session.get(User, user_id)
+        if target is None:
+            raise HTTPException(status_code=404, detail="Naudotojas nerastas")
+
+        target.role = data.role
+        session.commit()
+        session.refresh(target)
+        return target
